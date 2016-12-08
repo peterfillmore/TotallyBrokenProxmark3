@@ -44,19 +44,20 @@ reg [7:0] conf_word;
 // We switch modes between transmitting to the 13.56 MHz tag and receiving
 // from it, which means that we must make sure that we can do so without
 // glitching, or else we will glitch the transmitted carrier.
-always @(posedge ncs)
+// The bit format is:  C3 C2 C1 C0 D11 D10 D9 D8 D7 D6 D5 D4 D3 D2 D1 D0
+always @(posedge ncs) //SPI Peripheral Select 0
 begin
-	case(shift_reg[15:12])
-		4'b0001: conf_word <= shift_reg[7:0];		// FPGA_CMD_SET_CONFREG
+	case(shift_reg[15:12]) //get control bits (0001 is fpga cmd set confreg
+		4'b0001: conf_word <= shift_reg[7:0];		// FPGA_CMD_SET_CONFREG, v 
 	endcase
 end
 
-always @(posedge spck)
+always @(posedge spck) //SPI Serial clock (4 MHz)
 begin
-	if(~ncs)
+	if(~ncs) //SPI Peripheral Select is low? then send data?
 	begin
-		shift_reg[15:1] <= shift_reg[14:0];
-		shift_reg[0] <= mosi;
+		shift_reg[15:1] <= shift_reg[14:0]; //shift current bits
+		shift_reg[0] <= mosi; //get most recent bit and put in shift_reg 0
 	end
 end
 
@@ -141,7 +142,7 @@ hi_sniffer he(
 //   011 --  HF ISO14443-A
 //   100 --  HF Snoop
 //   111 --  everything off
-
+//                      (            y,         x0,           x1,             x2,           x3,             x4,         x5,   x6,   x7  )
 mux8 mux_ssp_clk		(major_mode, ssp_clk,   ht_ssp_clk,   hrxc_ssp_clk,   hs_ssp_clk,   hisn_ssp_clk,   he_ssp_clk, 1'b0, 1'b0, 1'b0);
 mux8 mux_ssp_din		(major_mode, ssp_din,   ht_ssp_din,   hrxc_ssp_din,   hs_ssp_din,   hisn_ssp_din,   he_ssp_din, 1'b0, 1'b0, 1'b0);
 mux8 mux_ssp_frame		(major_mode, ssp_frame, ht_ssp_frame, hrxc_ssp_frame, hs_ssp_frame, hisn_ssp_frame, he_ssp_frame, 1'b0, 1'b0, 1'b0);

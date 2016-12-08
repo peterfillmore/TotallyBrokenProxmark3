@@ -10,6 +10,21 @@
 `define READER_LISTEN	3'b011
 `define READER_MOD		3'b100
 
+//constants for tag to reader type
+`define DATA_NOPARITY   3'b000
+`define DATA_PARITY     3'b001
+`define START_PACKET    3'b010
+`define END_PACKET      3'b100
+ 
+//constants for manchester bit coding
+`define SEC_D           8'hF0
+`define SEC_E           8'h0F
+`define SEC_F           8'h00
+
+`define SEC_X           8'h0C
+`define SEC_Y           8'h00
+`define SEC_Z           8'hC0
+
 module hi_iso14443a(
     pck0, ck_1356meg, ck_1356megb,
     pwr_lo, pwr_hi, pwr_oe1, pwr_oe2, pwr_oe3, pwr_oe4,
@@ -265,6 +280,45 @@ begin
 		tag_data[3:0] <= {tag_data[2:0], curbit};
 	end
 end	
+
+
+//Demodulate received packet
+reg packet_ready; //indicate that packet has been received
+reg [15:0] rec_buffer;
+reg [3:0] rec_counter;  //counter for # of bits received
+
+always @(negedge adc_clk)
+begin
+    if(negedge_cnt[3:0] == 4'd0) 	// sample data at rising edge of ssp_clk - ssp_dout changes at the falling edge.
+	begin
+        rec_buffer[15:1] <= rec_buffer[14:0];  			// shift
+		rec_buffer[0] <= ssp_dout;						// add new data to the delay line
+        rec_counter = rec_counter + 1; 
+        if(rec_counter == 5'd15)
+        begin
+            packet_ready = 1'd1;
+            rec_counter = 0;
+        end 
+    end
+end
+
+wire [2:0] data_mode;
+assign data_mode = rec_buffer[10:8];
+
+wire [7:0] data_buf;
+assign data_buf = rec_buffer[7:0];
+
+//reg [
+//always @(posedge packet_ready)
+//    case(data_mode)
+//    DATA_NOPARITY:  
+//    DATA_PARITY:     
+//    START_PACKET:   
+//    END_PACKET:      
+//    endcase 
+//begin
+//    
+//end
 
 
 
